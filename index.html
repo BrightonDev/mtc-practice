@@ -38,9 +38,10 @@
   .hist { color:var(--muted); font-size:.95rem; }
   .hidden { display:none; }
   .otters { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:8px 0 16px; min-height:3rem; }
-  .otter { display:inline-block; font-size:2.4rem; animation:dance .7s ease-in-out infinite alternate; transform-origin:50% 90%; }
+  .otter { display:inline-block; font-size:3.6rem; animation:dance .7s ease-in-out infinite alternate; transform-origin:50% 90%; }
   .otter:nth-child(3n+2) { animation-delay:.2s; } .otter:nth-child(3n) { animation-delay:.4s; }
-  .otter.small { font-size:1.6rem; }
+  .otter.small { font-size:2.6rem; }
+  .otter.huge { font-size:6rem; }
   @keyframes dance {
     0%   { transform:translateY(0) rotate(-14deg); }
     50%  { transform:translateY(-14px) rotate(0deg) scale(1.1); }
@@ -55,7 +56,7 @@
 <!-- HOME -->
 <section id="home">
   <h1>Otters Times Tables</h1>
-  <div class="otters" style="min-height:0;margin:0 0 8px"><span class="otter">🦦</span><span class="otter">🦦</span><span class="otter">🦦</span></div>
+  <div class="otters" style="min-height:0;margin:0 0 8px"><span class="otter huge">🦦</span><span class="otter huge">🦦</span><span class="otter huge">🦦</span></div>
   <p class="sub">Practise for the Multiplication Tables Check</p>
 
   <div class="card">
