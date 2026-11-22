@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Times Tables Practice</title>
+<style>
+  :root { --bg:#f4f1ff; --card:#fff; --ink:#2b2350; --muted:#6b6590; --accent:#6c4cf1; --good:#1fa971; --bad:#e5484d; --warn:#f5a623; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#17132b; --card:#241f45; --ink:#f1eeff; --muted:#a59fd0; }
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family: ui-rounded, "Nunito", system-ui, sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; justify-content:center; }
+  main { width:100%; max-width:480px; padding:20px 16px 40px; }
+  h1 { font-size:1.8rem; margin:8px 0 4px; text-align:center; }
+  .sub { color:var(--muted); text-align:center; margin:0 0 20px; }
+  .card { background:var(--card); border-radius:20px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(60,40,150,.12); }
+  button { font:inherit; cursor:pointer; border:0; border-radius:14px; }
+  .big { width:100%; padding:16px; font-size:1.2rem; font-weight:700; background:var(--accent); color:#fff; margin-top:8px; }
+  .big.alt { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  .tables { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0; }
+  .tables button { padding:12px 0; font-size:1.1rem; font-weight:700; background:var(--bg); color:var(--ink); border:2px solid transparent; }
+  .tables button.on { background:var(--accent); color:#fff; }
+  .q { font-size:3.4rem; font-weight:800; text-align:center; margin:12px 0 4px; min-height:4.5rem; }
+  .ans { font-size:2.6rem; font-weight:800; text-align:center; min-height:3.6rem; border-bottom:4px solid var(--accent); margin:0 auto 14px; width:60%; }
+  .bar { height:12px; background:var(--bg); border-radius:8px; overflow:hidden; }
+  .bar > div { height:100%; width:100%; background:var(--accent); border-radius:8px; }
+  .pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .pad button { padding:16px 0; font-size:1.6rem; font-weight:700; background:var(--bg); color:var(--ink); }
+  .pad button:active { transform:scale(.96); }
+  .pad .go { background:var(--good); color:#fff; }
+  .pad .del { background:var(--warn); color:#fff; }
+  .prog { display:flex; justify-content:space-between; color:var(--muted); font-weight:700; margin-bottom:8px; }
+  .fb { text-align:center; font-size:1.4rem; font-weight:800; min-height:2rem; }
+  .good { color:var(--good); } .bad { color:var(--bad); }
+  .score { font-size:4rem; font-weight:800; text-align:center; margin:0; }
+  .wrong { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--bg); }
+  .hist { color:var(--muted); font-size:.95rem; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+
+<!-- HOME -->
+<section id="home">
+  <h1>⭐ Times Tables ⭐</h1>
+  <p class="sub">Practise for the Year 4 Multiplication Tables Check</p>
+
+  <div class="card">
+    <strong>Full practice check</strong>
+    <p class="hist">25 questions · 6 seconds each · 3-second gap, just like the real thing. Tricky tables (6, 7, 8, 9, 11, 12) come up most.</p>
+    <button class="big" id="startCheck">Start the check</button>
+    <p class="hist" id="history"></p>
+  </div>
+
+  <div class="card">
+    <strong>Relaxed practice</strong>
+    <p class="hist">No timer. Pick the tables you want. Facts you get wrong come up more often.</p>
+    <div class="tables" id="tablePick"></div>
+    <button class="big alt" id="startPractice">Start practice (10 questions)</button>
+  </div>
+
+  <div class="card">
+    <strong>Tricky facts</strong>
+    <div id="tricky" class="hist">Nothing yet. Do a check to find out!</div>
+    <button class="big alt" id="reset" style="font-size:.9rem;padding:10px">Clear my progress</button>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz" class="hidden">
+  <div class="prog"><span id="qnum"></span><button id="quit" style="background:none;color:var(--muted);font-weight:700">✕ Quit</button></div>
+  <div class="card">
+    <div class="bar" id="barWrap"><div id="bar"></div></div>
+    <div class="q" id="q"></div>
+    <div class="ans" id="ans"></div>
+    <div class="fb" id="fb"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results" class="hidden">
+  <div class="card">
+    <p class="score" id="finalScore"></p>
+    <p class="sub" id="finalMsg"></p>
+    <div id="wrongList"></div>
+    <button class="big" id="again">Try again</button>
+    <button class="big alt" id="homeBtn">Home</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const TRICKY = [6,7,8,9,11,12];
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let stats = store.get('mtc_stats', {});      // "a×b" -> {r,w}
+let history = store.get('mtc_history', []);  // [{d,score}]
+let selected = new Set(store.get('mtc_tables', [6,7,8,9]));
+
+const key = (a,b) => a<b ? `${a}×${b}` : `${b}×${a}`;
+function weakWeight(a,b){ const s = stats[key(a,b)]; return s ? 1 + 4*s.w/(s.r+s.w+1) : 1; }
+function pick(items, weights){
+  let t = weights.reduce((x,y)=>x+y,0), r = Math.random()*t;
+  for (let i=0;i<items.length;i++){ if((r-=weights[i])<=0) return items[i]; }
+  return items[items.length-1];
+}
+
+function makeQuestions(n, tables, tricky){
+  const qs = [], seen = new Set();
+  let guard = 0;
+  while (qs.length < n && guard++ < 2000){
+    const a = pick(tables, tables.map(t => (tricky && TRICKY.includes(t)) ? 3 : 1));
+    const bs = []; for (let b=2;b<=12;b++) bs.push(b);
+    const b = pick(bs, bs.map(b => weakWeight(a,b)));
+    const k = key(a,b);
+    if (seen.has(k) && guard < 1500) continue;
+    seen.add(k);
+    qs.push(Math.random()<.5 ? [a,b] : [b,a]);
+  }
+  return qs;
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  const tp = $('tablePick'); tp.innerHTML = '';
+  for (let t=2;t<=12;t++){
+    const b = document.createElement('button');
+    b.textContent = t; if (selected.has(t)) b.className='on';
+    b.onclick = () => { selected.has(t) ? selected.delete(t) : selected.add(t); store.set('mtc_tables',[...selected]); renderHome(); };
+    tp.appendChild(b);
+  }
+  const h = history.slice(-5).reverse().map(x => `${x.score}/25`).join(' · ');
+  $('history').textContent = h ? `Recent scores: ${h}` : '';
+  const weak = Object.entries(stats).filter(([,s]) => s.w>0)
+    .sort((a,b)=> b[1].w/(b[1].r+b[1].w) - a[1].w/(a[1].r+a[1].w)).slice(0,8);
+  $('tricky').textContent = weak.length ? weak.map(([k])=>k).join('   ') : 'Nothing yet. Do a check to find out!';
+  show('home');
+}
+function show(id){ for (const s of ['home','quiz','results']) $(s).classList.toggle('hidden', s!==id); }
+
+/* ---------- Number pad ---------- */
+const pad = $('pad');
+['1','2','3','4','5','6','7','8','9','⌫','0','Go'].forEach(k => {
+  const b = document.createElement('button'); b.textContent = k;
+  if (k==='Go') b.className='go'; if (k==='⌫') b.className='del';
+  b.onclick = () => press(k); pad.appendChild(b);
+});
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') press(e.key);
+  else if (e.key === 'Backspace') press('⌫');
+  else if (e.key === 'Enter') press('Go');
+});
+
+/* ---------- Quiz engine ---------- */
+let run = null;
+function startRun(mode){
+  const timed = mode==='check';
+  let qs;
+  if (timed) qs = makeQuestions(25, [2,3,4,5,6,7,8,9,10,11,12], true);
+  else {
+    if (!selected.size) { alert('Pick at least one table first!'); return; }
+    qs = makeQuestions(10, [...selected], false);
+  }
+  run = { mode, timed, qs, i:0, answers:[], input:'', state:'idle', timer:null };
+  show('quiz'); next();
+}
+function next(){
+  clearTimeout(run.timer);
+  if (run.i >= run.qs.length) return finish();
+  const [a,b] = run.qs[run.i];
+  run.input=''; run.state='answering';
+  $('qnum').textContent = `Question ${run.i+1} of ${run.qs.length}`;
+  $('q').textContent = `${a} × ${b} =`;
+  $('fb').textContent = ''; $('ans').textContent = '';
+  const bar = $('bar'); bar.style.transition='none'; bar.style.width='100%';
+  $('barWrap').style.visibility = run.timed ? 'visible' : 'hidden';
+  if (run.timed){
+    void bar.offsetWidth;
+    bar.style.transition='width 6s linear'; bar.style.width='0%';
+    run.timer = setTimeout(submit, 6000);
+  }
+}
+function press(k){
+  if (!run || run.state!=='answering') return;
+  if (k==='Go') return submit();
+  if (k==='⌫') run.input = run.input.slice(0,-1);
+  else if (run.input.length < 3) run.input += k;
+  $('ans').textContent = run.input;
+}
+function submit(){
+  if (!run || run.state!=='answering') return;
+  clearTimeout(run.timer);
+  const [a,b] = run.qs[run.i];
+  const given = run.input === '' ? null : parseInt(run.input,10);
+  const ok = given === a*b;
+  run.answers.push({a,b,given,ok});
+  const k = key(a,b); stats[k] = stats[k] || {r:0,w:0}; ok ? stats[k].r++ : stats[k].w++;
+  store.set('mtc_stats', stats);
+  run.state='between'; run.i++;
+  if (run.timed){
+    // freeze the bar, hide the question for the 3-second gap (no feedback, like the real test)
+    $('bar').style.transition='none';
+    $('q').textContent = ''; $('ans').textContent=''; $('bar').style.width='100%';
+    run.timer = setTimeout(next, 3000);
+  } else {
+    $('ans').textContent = ok ? given : (given ?? '');
+    $('fb').innerHTML = ok ? '<span class="good">✓ Correct!</span>' : `<span class="bad">It's ${a*b}</span>`;
+    run.timer = setTimeout(next, ok ? 900 : 2200);
+  }
+}
+function finish(){
+  const right = run.answers.filter(x=>x.ok).length, n = run.answers.length;
+  if (run.timed){ history.push({d:Date.now(), score:right}); store.set('mtc_history', history); }
+  $('finalScore').textContent = `${right} / ${n}`;
+  $('finalMsg').textContent = right===n ? 'Perfect! 🌟' : right >= n*0.8 ? 'Brilliant work! 🎉' : right >= n*0.5 ? 'Good going, keep practising! 💪' : 'Every go makes you faster! 🚀';
+  const wrong = run.answers.filter(x=>!x.ok);
+  $('wrongList').innerHTML = wrong.length ? '<strong>To practise:</strong>' + wrong.map(x =>
+    `<div class="wrong"><span>${x.a} × ${x.b} = <b>${x.a*x.b}</b></span><span class="bad">${x.given ?? 'no answer'}</span></div>`).join('') : '';
+  show('results');
+}
+
+$('startCheck').onclick = () => startRun('check');
+$('startPractice').onclick = () => startRun('practice');
+$('again').onclick = () => startRun(run.mode);
+$('homeBtn').onclick = renderHome;
+$('quit').onclick = () => { if (run) clearTimeout(run.timer); run = null; renderHome(); };
+$('reset').onclick = () => { if (confirm('Clear all progress?')) { stats={}; history=[]; store.set('mtc_stats',{}); store.set('mtc_history',[]); renderHome(); } };
+renderHome();
+</script>
+</body>
+</html>
