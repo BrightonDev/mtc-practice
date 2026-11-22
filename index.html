@@ -37,6 +37,16 @@
   .wrong { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--bg); }
   .hist { color:var(--muted); font-size:.95rem; }
   .hidden { display:none; }
+  .otters { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:8px 0 16px; min-height:3rem; }
+  .otter { display:inline-block; font-size:2.4rem; animation:dance .7s ease-in-out infinite alternate; transform-origin:50% 90%; }
+  .otter:nth-child(3n+2) { animation-delay:.2s; } .otter:nth-child(3n) { animation-delay:.4s; }
+  .otter.small { font-size:1.6rem; }
+  @keyframes dance {
+    0%   { transform:translateY(0) rotate(-14deg); }
+    50%  { transform:translateY(-14px) rotate(0deg) scale(1.1); }
+    100% { transform:translateY(0) rotate(14deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .otter { animation:none; } }
 </style>
 </head>
 <body>
@@ -85,6 +95,7 @@
   <div class="card">
     <p class="score" id="finalScore"></p>
     <p class="sub" id="finalMsg"></p>
+    <div class="otters" id="otters"></div>
     <div id="wrongList"></div>
     <button class="big" id="again">Try again</button>
     <button class="big alt" id="homeBtn">Home</button>
@@ -211,7 +222,7 @@ function submit(){
     run.timer = setTimeout(next, 3000);
   } else {
     $('ans').textContent = ok ? given : (given ?? '');
-    $('fb').innerHTML = ok ? '<span class="good">✓ Correct!</span>' : `<span class="bad">It's ${a*b}</span>`;
+    $('fb').innerHTML = ok ? '<span class="good">✓ Correct!</span> <span class="otter small">🦦</span>' : `<span class="bad">It's ${a*b}</span>`;
     run.timer = setTimeout(next, ok ? 900 : 2200);
   }
 }
@@ -220,6 +231,8 @@ function finish(){
   if (run.timed){ history.push({d:Date.now(), score:right}); store.set('mtc_history', history); }
   $('finalScore').textContent = `${right} / ${n}`;
   $('finalMsg').textContent = right===n ? 'Perfect! 🌟' : right >= n*0.8 ? 'Brilliant work! 🎉' : right >= n*0.5 ? 'Good going, keep practising! 💪' : 'Every go makes you faster! 🚀';
+  // one dancing otter per correct answer (at least one, so everyone gets a party)
+  $('otters').innerHTML = '<span class="otter">🦦</span>'.repeat(Math.max(1, right));
   const wrong = run.answers.filter(x=>!x.ok);
   $('wrongList').innerHTML = wrong.length ? '<strong>To practise:</strong>' + wrong.map(x =>
     `<div class="wrong"><span>${x.a} × ${x.b} = <b>${x.a*x.b}</b></span><span class="bad">${x.given ?? 'no answer'}</span></div>`).join('') : '';
