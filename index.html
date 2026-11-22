@@ -37,6 +37,8 @@
   .wrong { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--bg); }
   .hist { color:var(--muted); font-size:.95rem; }
   .hidden { display:none; }
+  .hintbox { text-align:center; font-size:1.3rem; font-weight:700; color:var(--accent); min-height:1.8rem; margin-bottom:6px; }
+  .hintbtn { display:block; margin:0 auto 14px; padding:10px 22px; font-size:1.1rem; font-weight:700; background:var(--bg); color:var(--accent); border:2px solid var(--accent); }
   .otters { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:8px 0 16px; min-height:3rem; }
   .otter { display:inline-block; font-size:3.6rem; animation:dance .7s ease-in-out infinite alternate; transform-origin:50% 90%; }
   .otter:nth-child(3n+2) { animation-delay:.2s; } .otter:nth-child(3n) { animation-delay:.4s; }
@@ -88,6 +90,8 @@
     <div class="q" id="q"></div>
     <div class="ans" id="ans"></div>
     <div class="fb" id="fb"></div>
+    <div class="hintbox" id="hintbox"></div>
+    <button class="hintbtn hidden" id="hintbtn">💡 Hint</button>
     <div class="pad" id="pad"></div>
   </div>
 </section>
@@ -192,6 +196,8 @@ function next(){
   $('qnum').textContent = `Question ${run.i+1} of ${run.qs.length}`;
   $('q').textContent = `${a} × ${b} =`;
   $('fb').textContent = ''; $('ans').textContent = '';
+  run.hint = 0; $('hintbox').textContent = '';
+  $('hintbtn').textContent = '💡 Hint'; $('hintbtn').classList.toggle('hidden', run.timed);
   const bar = $('bar'); bar.style.transition='none'; bar.style.width='100%';
   $('barWrap').style.visibility = run.timed ? 'visible' : 'hidden';
   if (run.timed){
@@ -207,6 +213,20 @@ function press(k){
   else if (run.input.length < 3) run.input += k;
   $('ans').textContent = run.input;
 }
+$('hintbtn').onclick = () => {
+  if (!run || run.state!=='answering' || run.timed) return;
+  const [a,b] = run.qs[run.i];
+  if (run.hint === 0) {
+    // skip-count in the bigger number, fewer steps (e.g. 12 × 3 -> 12, 24, ?)
+    const step = Math.max(a,b), times = Math.min(a,b);
+    const chain = []; for (let i=1;i<times;i++) chain.push(step*i);
+    $('hintbox').textContent = `Count in ${step}s: ${chain.join(', ')}, ?`;
+    $('hintbtn').textContent = '👀 Show answer';
+    run.hint = 1;
+  } else {
+    run.input = ''; submit();   // counted as missed so it comes back later
+  }
+};
 function submit(){
   if (!run || run.state!=='answering') return;
   clearTimeout(run.timer);
@@ -217,6 +237,7 @@ function submit(){
   const k = key(a,b); stats[k] = stats[k] || {r:0,w:0}; ok ? stats[k].r++ : stats[k].w++;
   store.set('mtc_stats', stats);
   run.state='between'; run.i++;
+  $('hintbtn').classList.add('hidden'); $('hintbox').textContent = '';
   if (run.timed){
     // freeze the bar, hide the question for the 3-second gap (no feedback, like the real test)
     $('bar').style.transition='none';
